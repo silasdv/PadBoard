@@ -35,7 +35,7 @@ class InputFeedbackTest {
         val motor=shadowOf(vibrator)
         motor.setHasVibrator(true)
         ime.onStartInputView(ime.info,false)
-        ime.onKeyDown(KeyEvent.KEYCODE_BUTTON_B,KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_BUTTON_B))
+        ime.onKeyDown(KeyEvent.KEYCODE_BUTTON_A,KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_BUTTON_A))
         assertTrue(ime.connection.editable?.isNotEmpty()==true)
         assertTrue(motor.isVibrating)
         vibrator.cancel()
@@ -45,4 +45,3 @@ class InputFeedbackTest {
         controller.destroy()
     }
 }
-

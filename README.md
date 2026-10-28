@@ -2,7 +2,7 @@
 
 **A controller-first Android keyboard for handhelds, with full touch support.**
 
-PadBoard 1.0 is built for Android gaming handhelds such as the Retroid Pocket 6. It supports English QWERTY and German QWERTZ typing layouts.
+PadBoard is built for Android gaming handhelds such as the Retroid Pocket 6. It supports English QWERTY and German QWERTZ typing layouts.
 
 ## Vibecoded
 
@@ -21,7 +21,7 @@ This project is **vibecoded**: its implementation and documentation were created
 
 ## Install
 
-Download **PadBoard-1.0.apk** from this repository's Releases page. Android 8.0 or newer is required.
+Download **PadBoard-1.0.1.apk** from this repository's Releases page. Android 8.0 or newer is required.
 
 1. Open PadBoard and choose **Enable** in the Setup section.
 2. Enable PadBoard in Android's input-method settings.
@@ -47,7 +47,7 @@ Keep another keyboard enabled so you can switch back with Android's keyboard pic
 | Start | Invoke the field action |
 | Select | Switch typing language |
 
-Retroid and Nintendo profiles have been merged into Nintendo. Firmware input modes can change Android button codes. Use **Button Mapping >** to adjust bindings or restore the defaults. Assigning an occupied button swaps the two actions. Mappings currently apply globally.
+Use **Button Mapping >** to choose button labels and adjust bindings. On Retroid handhelds, Android controller modes can change the reported ABXY codes. Select Nintendo for the printed Retroid labels, then choose **Calibrate printed A button** and press the physical A button. Repeat calibration after changing the Android controller mode. The Android button reporting option also allows manual selection of logical labels or physical positions. Calibration resets the four face-button actions and preserves other bindings by swapping conflicts. Assigning an occupied button swaps the two actions. Mappings currently apply globally.
 
 ## Build
 

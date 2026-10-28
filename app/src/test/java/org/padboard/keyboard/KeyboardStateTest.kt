@@ -4,6 +4,16 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class KeyboardStateTest {
+    @Test fun nintendoLogicalAndPositionReportingResolvePrintedButtonsConsistently() {
+        for(mode in listOf("logical","position")) {
+            val map=ButtonBindings.forLayout("nintendo",mode)
+            for((action,label) in mapOf("type" to "A","close" to "B","delete" to "X","space" to "Y")) {
+                assertEquals(label,ButtonBindings.label(map.getValue(action),"nintendo",mode))
+            }
+        }
+        assertEquals(96,ButtonBindings.forLayout("nintendo","logical")["type"])
+        assertEquals(97,ButtonBindings.forLayout("nintendo","position")["type"])
+    }
     @Test fun shiftAndSymbolsKeepTheirAnchorsAcrossLanguagesAndLayers() {
         for(language in listOf("de","en")) for(numbers in listOf(false,true)) {
             val s=KeyboardState(language); s.numberRow=numbers
@@ -12,9 +22,9 @@ class KeyboardStateTest {
             for(p in s.placements().filter { it.key.id in anchors }) assertEquals(anchors[p.key.id],p.row to p.x)
             assertTrue(s.placements().filter { it.key.action!="none" }.all { it.x>=0 && it.x+it.key.width<=s.totalWidth() })
         }
-        val retroid=ButtonBindings.forLayout("nintendo")
-        assertEquals("A",ButtonBindings.label(retroid.getValue("type"),"nintendo"))
-        assertEquals("B",ButtonBindings.label(retroid.getValue("close"),"nintendo"))
+        val retroid=ButtonBindings.forLayout("nintendo","position")
+        assertEquals("A",ButtonBindings.label(retroid.getValue("type"),"nintendo","position"))
+        assertEquals("B",ButtonBindings.label(retroid.getValue("close"),"nintendo","position"))
         assertEquals(97,retroid["type"])
     }
     @Test fun casePreservesSharpSAndDoesNotMoveSpaceOrActionForEitherLanguage() {
@@ -49,7 +59,7 @@ class KeyboardStateTest {
         assertEquals(99,changed["space"]); assertEquals(100,changed["delete"])
         assertEquals(changed.size,changed.values.toSet().size)
         assertEquals("X",ButtonBindings.label(changed.getValue("space"),"xbox"))
-        assertEquals("Y",ButtonBindings.label(changed.getValue("space"),"nintendo"))
+        assertEquals("Y",ButtonBindings.label(changed.getValue("space"),"nintendo","position"))
         assertEquals("□",ButtonBindings.label(changed.getValue("space"),"playstation"))
     }
     @Test fun contextAddsRowsAboveWithoutChangingBaseGeometry() {
@@ -133,5 +143,3 @@ class KeyboardStateTest {
         assertTrue(s.column in s.rows()[s.row].indices)
     }
 }
-
-

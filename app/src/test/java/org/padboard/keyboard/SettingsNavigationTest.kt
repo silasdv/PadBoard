@@ -13,6 +13,42 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk=[33])
 class SettingsNavigationTest {
+    @Test fun calibrationReadsPrintedAAndKeepsOtherBindings() {
+        val controller=Robolectric.buildActivity(SetupActivity::class.java).setup()
+        val activity=controller.get()
+        val prefs=activity.getSharedPreferences("settings",0)
+        prefs.edit().putString("buttonLayout","nintendo").putString("map_send","106").commit()
+        val calibrate=SetupActivity::class.java.getDeclaredMethod("calibrateButtons").apply { isAccessible=true }
+        for((key,mode) in listOf(97 to "position",96 to "logical")) {
+            calibrate.invoke(activity)
+            val dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog()
+            dialog.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN,key))
+            assertEquals(mode,prefs.getString("inputConvention",null))
+            val map=ButtonBindings.read(prefs)
+            assertEquals(key,map["type"])
+            assertEquals(106,map["send"])
+            assertEquals(map.size,map.values.toSet().size)
+        }
+        controller.pause().stop().destroy()
+    }
+    @Test fun vibrationSelectionKeepsTheSameScrolledSettingsView() {
+        val controller=Robolectric.buildActivity(SetupActivity::class.java).setup().visible()
+        val activity=controller.get()
+        val content=activity.findViewById<android.view.ViewGroup>(android.R.id.content)
+        val scroll=content.getChildAt(0) as android.widget.ScrollView
+        scroll.measure(View.MeasureSpec.makeMeasureSpec(1000,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(600,View.MeasureSpec.EXACTLY))
+        scroll.layout(0,0,1000,600); scroll.scrollTo(0,250)
+        val before=scroll.scrollY
+        assertTrue(before>0)
+        val field=SetupActivity::class.java.getDeclaredField("controls").apply { isAccessible=true }
+        @Suppress("UNCHECKED_CAST") val controls=field.get(activity) as List<View>
+        controls.filterIsInstance<android.widget.Button>().first { it.text.toString()=="Strong" }.performClick()
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+        assertSame(scroll,content.getChildAt(0))
+        assertEquals(before,scroll.scrollY)
+        assertEquals("strong",activity.getSharedPreferences("settings",0).getString("hapticStrength",null))
+        controller.pause().stop().destroy()
+    }
     @Test fun mappingIsAnIsolatedSubmenuAndTouchCheckboxChangesOnFirstTap() {
         val controller=Robolectric.buildActivity(SetupActivity::class.java).setup().visible()
         controller.windowFocusChanged(true)
@@ -74,4 +110,3 @@ class SettingsNavigationTest {
         controller.pause().stop().destroy()
     }
 }
-

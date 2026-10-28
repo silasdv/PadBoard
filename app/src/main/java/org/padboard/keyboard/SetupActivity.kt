@@ -149,6 +149,27 @@ class SetupActivity : Activity() {
         if(mappingPage) { mappingPage=false; render() } else super.onBackPressed()
     }
     override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); ButtonBindings.migrate(getSharedPreferences("settings",MODE_PRIVATE)); render() }
+    private fun calibrateButtons() {
+        val dialog=AlertDialog.Builder(this).setTitle("Calibrate controller")
+            .setMessage("Press the button printed A on your controller. This sets A to type, B to close, X to delete and Y to space. Other bindings are preserved by swapping conflicts. Use this again after changing the handheld's Android controller mode.")
+            .setNegativeButton("Cancel",null).create()
+        dialog.setOnKeyListener { _,key,event ->
+            if(key !in listOf(96,97)) false else {
+                if(event.action==android.view.KeyEvent.ACTION_DOWN && event.repeatCount==0) {
+                    val prefs=getSharedPreferences("settings",MODE_PRIVATE)
+                    val mode=if(key==96) "logical" else "position"
+                    var updated=ButtonBindings.read(prefs)
+                    val face=ButtonBindings.forLayout("nintendo",mode)
+                    for(action in listOf("type","close","delete","space")) updated=ButtonBindings.assign(updated,action,face.getValue(action))
+                    val edit=prefs.edit().putString("inputConvention",mode)
+                    updated.forEach { (a,c)->edit.putString("map_$a",c.toString()) }; edit.apply()
+                    dialog.dismiss(); render()
+                }
+                true
+            }
+        }
+        dialog.show()
+    }
     private fun render() {
         val previousIndex=controls.indexOf(focusedControl()).coerceAtLeast(0); controls.clear()
         val prefs=getSharedPreferences("settings",MODE_PRIVATE)
@@ -205,11 +226,15 @@ class SetupActivity : Activity() {
         dropdown(mappingCard,listOf("Nintendo","Xbox","PlayStation"),listOf("nintendo","xbox","playstation"),"buttonLayout","nintendo") { render() }
         val layout=prefs.getString("buttonLayout","nintendo") ?: "nintendo"
         val bindings=ButtonBindings.read(prefs)
-        val profileDefaults=ButtonBindings.forLayout(layout)
+        val convention=prefs.getString("inputConvention","logical") ?: "logical"
+        text(mappingCard,"Android button reporting",14f,muted)
+        dropdown(mappingCard,listOf("Logical A/B/X/Y","Physical positions (Nintendo labels swapped)"),listOf("logical","position"),"inputConvention","logical") { render() }
+        button(mappingCard,"Calibrate printed A button") { calibrateButtons() }
+        val profileDefaults=ButtonBindings.forLayout(layout,convention)
         val names=mapOf("type" to "Confirm character","close" to "Close keyboard","delete" to "Delete","space" to "Space","up" to "Previous row","down" to "Next row","symbols" to "Symbols","case" to "Upper/lower case","send" to "Editor action","language" to "Switch language")
         for((action,code) in profileDefaults) {
             text(mappingCard,names[action] ?: action,14f,muted)
-            dropdown(mappingCard,ButtonBindings.buttons.map { ButtonBindings.label(it,layout) },ButtonBindings.buttons.map { it.toString() },"map_$action",code.toString()) {
+            dropdown(mappingCard,ButtonBindings.buttons.map { ButtonBindings.label(it,layout,convention) },ButtonBindings.buttons.map { it.toString() },"map_$action",code.toString()) {
                 val chosen=prefs.getString("map_$action",code.toString())!!.toInt()
                 val update=ButtonBindings.assign(bindings,action,chosen)
                 val edit=prefs.edit(); update.forEach { (a,c)->edit.putString("map_$a",c.toString()) }; edit.apply(); render()
@@ -259,9 +284,23 @@ class SetupActivity : Activity() {
         text(feedback,"Vibration strength",14f,muted)
         val strengths=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
         feedback.addView(strengths)
+        val strengthButtons=mutableListOf<Button>()
+        fun refreshStrengths() {
+            strengthButtons.forEach { control ->
+                val selected=prefs.getString("hapticStrength","light")==control.getTag(R.id.vibration_strength)
+                control.tag="choice:$selected"
+                val normal=rounded(if(selected) accent else Color.TRANSPARENT).apply { if(!selected) setStroke(dp(2),accent) }
+                val focused=rounded(if(selected) accent else Color.TRANSPARENT).apply { setStroke(dp(3),Color.rgb(174,255,231)) }
+                control.background=android.graphics.drawable.StateListDrawable().apply {
+                    addState(intArrayOf(android.R.attr.state_focused),focused); addState(intArrayOf(),normal)
+                }
+                control.setTextColor(if(selected) Color.rgb(11,28,28) else accent)
+            }
+        }
         for((value,label) in listOf("light" to "Light","medium" to "Medium","strong" to "Strong")) {
             val selected=prefs.getString("hapticStrength","light")==value
-            button(strengths,label) { prefs.edit().putString("hapticStrength",value).apply(); render() }.apply {
+            button(strengths,label) { prefs.edit().putString("hapticStrength",value).apply(); refreshStrengths() }.apply {
+                setTag(R.id.vibration_strength,value); strengthButtons.add(this)
                 tag="choice:$selected"
                 background=rounded(if(selected) accent else Color.TRANSPARENT).apply { if(!selected) setStroke(dp(2),accent) }
                 setTextColor(if(selected) Color.rgb(11,28,28) else accent)
@@ -282,16 +321,8 @@ class SetupActivity : Activity() {
             try { startActivity(Intent(Intent.ACTION_VIEW,android.net.Uri.parse("https://ko-fi.com/silasdv"))) }
             catch (_:android.content.ActivityNotFoundException) { Toast.makeText(this,"No browser available",Toast.LENGTH_SHORT).show() }
         }
-        text(body,"1.0",12f,muted)
+        text(body,"1.0.1",12f,muted)
         installFocus(body)
         if (controllerMode && controls.isNotEmpty()) controls[previousIndex.coerceAtMost(controls.lastIndex)].requestFocus()
     }
 }
-
-
-
-
-
-
-
-

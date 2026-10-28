@@ -124,6 +124,7 @@ open class PadIme : InputMethodService(), InputManager.InputDeviceListener {
         keyboard?.sendLabel = actionLabel()
         keyboard?.bindings = bindings()
         keyboard?.buttonLayout = prefs.getString("buttonLayout","nintendo") ?: "nintendo"
+        keyboard?.inputConvention = prefs.getString("inputConvention","logical") ?: "logical"
         keyboard?.invalidate(); box.requestLayout()
         updatePreview()
     }
@@ -263,8 +264,3 @@ open class PadIme : InputMethodService(), InputManager.InputDeviceListener {
         return true
     }
 }
-
-
-
-
-

@@ -33,6 +33,7 @@ class KeyboardView(context: Context, private val state: KeyboardState, private v
     var controllerFocus = false
     var sendLabel = ""
     var buttonLayout = "nintendo"
+    var inputConvention = "logical"
     var bindings: Map<String,Int> = ButtonBindings.defaults
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var pressed: String? = null
@@ -88,7 +89,7 @@ class KeyboardView(context: Context, private val state: KeyboardState, private v
             }
 
             if (key.badge.isNotEmpty()) {
-                bindings[key.action]?.let { code -> badge(canvas,rect,ButtonBindings.label(code,buttonLayout),code) }
+                bindings[key.action]?.let { code -> badge(canvas,rect,ButtonBindings.label(code,buttonLayout,inputConvention),code) }
             }
         }
     }
@@ -136,8 +137,3 @@ class KeyboardView(context: Context, private val state: KeyboardState, private v
     }
     override fun performClick(): Boolean { super.performClick(); return true }
 }
-
-
-
-
-

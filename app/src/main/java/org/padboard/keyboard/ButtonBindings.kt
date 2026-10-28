@@ -1,13 +1,13 @@
 package org.padboard.keyboard
 
-/** Android key codes denote positions; presentation labels depend on the selected controller. */
+/** Firmware can report printed labels or physical positions; presentation is configured separately. */
 object ButtonBindings {
     val buttons=listOf(96,97,99,100,102,103,104,105,106,107,108,109)
     val defaults=linkedMapOf("type" to 96,"close" to 97,"delete" to 99,"space" to 100,"up" to 102,"down" to 103,"symbols" to 104,"case" to 105,"send" to 108,"language" to 109)
-    fun forLayout(layout:String):Map<String,Int> = if(layout=="nintendo")
+    fun forLayout(layout:String,convention:String="logical"):Map<String,Int> = if(layout=="nintendo" && convention=="position")
         defaults + mapOf("type" to 97,"close" to 96,"delete" to 100,"space" to 99) else defaults
     fun read(prefs:android.content.SharedPreferences):Map<String,Int> {
-        val base=forLayout(prefs.getString("buttonLayout","nintendo") ?: "nintendo")
+        val base=forLayout(prefs.getString("buttonLayout","nintendo") ?: "nintendo",prefs.getString("inputConvention","logical") ?: "logical")
         return base.mapValues { (a,c)->prefs.getString("map_$a",c.toString())?.toIntOrNull() ?: c }
     }
     fun migrate(prefs:android.content.SharedPreferences) {
@@ -19,11 +19,11 @@ object ButtonBindings {
         if(layout=="nintendo" && previous==defaults) defaults.keys.forEach { edit.remove("map_$it") }
         edit.putInt("mappingSchema",2).apply()
     }
-    fun label(code:Int,layout:String):String = when(code) {
-        96 -> when(layout) { "nintendo"->"B"; "playstation"->"✕"; else->"A" }
-        97 -> when(layout) { "nintendo"->"A"; "playstation"->"○"; else->"B" }
-        99 -> when(layout) { "nintendo"->"Y"; "playstation"->"□"; else->"X" }
-        100 -> when(layout) { "nintendo"->"X"; "playstation"->"△"; else->"Y" }
+    fun label(code:Int,layout:String,convention:String="logical"):String = when(code) {
+        96 -> when(layout) { "nintendo"->if(convention=="position") "B" else "A"; "playstation"->"✕"; else->"A" }
+        97 -> when(layout) { "nintendo"->if(convention=="position") "A" else "B"; "playstation"->"○"; else->"B" }
+        99 -> when(layout) { "nintendo"->if(convention=="position") "Y" else "X"; "playstation"->"□"; else->"X" }
+        100 -> when(layout) { "nintendo"->if(convention=="position") "X" else "Y"; "playstation"->"△"; else->"Y" }
         102 -> if(layout=="xbox") "LB" else "L1"
         103 -> if(layout=="xbox") "RB" else "R1"
         104 -> if(layout=="xbox") "LT" else "L2"
@@ -42,5 +42,3 @@ object ButtonBindings {
         return result
     }
 }
-
-
