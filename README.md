@@ -18,7 +18,6 @@ This project is **vibecoded**: its implementation and documentation were created
 - Optional number row and contextual @, .com, .de and .net shortcuts above email fields.
 - Ten themes: Light, Dark, OLED, Purple, Ocean, Forest, Rose, Amber, Crimson and Slate.
 - Adjustable base height, optional Light/Medium/Strong haptics and an offline design.
-- German sharp ß remains ß in uppercase mode.
 
 ## Install
 
@@ -76,4 +75,4 @@ Tips are optional: [Ko-fi / silasdv](https://ko-fi.com/silasdv). All features re
 
 ## License
 
-MIT. See [LICENSE](LICENSE). No LeanKeyboard source code was copied.
+MIT. See [LICENSE](LICENSE).
