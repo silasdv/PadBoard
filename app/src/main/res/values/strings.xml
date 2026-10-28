@@ -1,0 +1,5 @@
+<resources>
+    <string name="german">Deutsch</string><string name="english">English</string>
+    <string name="size_de">Tastaturgröße: %1$d %%</string>
+    <string name="size_en">Keyboard size: %1$d %%</string>
+</resources>

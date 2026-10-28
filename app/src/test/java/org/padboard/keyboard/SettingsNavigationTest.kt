@@ -1,0 +1,77 @@
+package org.padboard.keyboard
+
+import android.view.KeyEvent
+import android.view.View
+import android.widget.Spinner
+import org.junit.Assert.*
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.Robolectric
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk=[33])
+class SettingsNavigationTest {
+    @Test fun mappingIsAnIsolatedSubmenuAndTouchCheckboxChangesOnFirstTap() {
+        val controller=Robolectric.buildActivity(SetupActivity::class.java).setup().visible()
+        controller.windowFocusChanged(true)
+        val activity=controller.get()
+        val field=SetupActivity::class.java.getDeclaredField("controls").apply { isAccessible=true }
+        @Suppress("UNCHECKED_CAST") fun controls()=(field.get(activity) as List<View>).toList()
+        val mainCount=controls().filterIsInstance<Spinner>().size
+        controls().filterIsInstance<android.widget.Button>().first { it.text.toString().startsWith("Button Mapping") }.performClick()
+        assertTrue(controls().filterIsInstance<Spinner>().size>mainCount)
+        controls().filterIsInstance<android.widget.Button>().first { it.text.toString().contains("Back") }.performClick()
+        assertEquals(mainCount,controls().filterIsInstance<Spinner>().size)
+        activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_UP))
+        val down=android.view.MotionEvent.obtain(0,0,android.view.MotionEvent.ACTION_DOWN,0f,0f,0)
+        activity.dispatchTouchEvent(down); down.recycle()
+        val checkbox=controls().filterIsInstance<android.widget.CheckBox>().first()
+        assertFalse(checkbox.isFocusableInTouchMode)
+        checkbox.measure(View.MeasureSpec.makeMeasureSpec(900,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(80,View.MeasureSpec.EXACTLY))
+        checkbox.layout(0,0,900,80)
+        val before=checkbox.isChecked
+        for(action in listOf(android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP)) {
+            val e=android.view.MotionEvent.obtain(0,1,action,450f,40f,0); checkbox.dispatchTouchEvent(e); e.recycle()
+        }
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+        assertEquals(!before,checkbox.isChecked)
+        controller.pause().stop().destroy()
+    }
+    @Test fun tenDistinctThemesIncludeBaseModes() {
+        assertEquals(10,Palette.ids.size)
+        assertEquals(10,Palette.ids.map { Palette.named(it) }.toSet().size)
+        assertTrue(Palette.ids.containsAll(listOf("light","dark","oled")))
+    }
+    @Test fun controllerCanFocusControlsAfterTouchAndAdvanceInOrder() {
+        val controller=Robolectric.buildActivity(SetupActivity::class.java).setup().visible()
+        controller.windowFocusChanged(true)
+        val activity=controller.get()
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+        activity.window.decorView.measure(View.MeasureSpec.makeMeasureSpec(1920,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(1080,View.MeasureSpec.EXACTLY))
+        activity.window.decorView.layout(0,0,1920,1080)
+        val field=SetupActivity::class.java.getDeclaredField("controls").apply { isAccessible=true }
+        @Suppress("UNCHECKED_CAST") val controls=field.get(activity) as List<View>
+        assertTrue(controls.size>15)
+        activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_UP))
+        activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP,KeyEvent.KEYCODE_DPAD_UP))
+        controls.forEach { assertTrue(it.isFocusableInTouchMode); assertFalse(it.defaultFocusHighlightEnabled) }
+        assertTrue("First control cannot take focus",controls[0].requestFocus())
+        assertSame("Focus control is detached from current content",activity.window.decorView,controls[0].rootView)
+        assertTrue("View did not retain focus",controls[0].isFocused)
+        assertNotNull("Decor has no focused view",activity.window.decorView.findFocus())
+        assertTrue("Window not focused",activity.hasWindowFocus())
+        activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_DOWN))
+        activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP,KeyEvent.KEYCODE_DPAD_DOWN))
+        assertSame(controls[1],activity.window.decorView.findFocus())
+        activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_RIGHT))
+        assertSame(controls[1],activity.window.decorView.findFocus())
+        val spinner=controls.filterIsInstance<Spinner>().first()
+        spinner.requestFocus()
+        activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_RIGHT))
+        assertEquals(1,spinner.selectedItemPosition)
+        controller.pause().stop().destroy()
+    }
+}
+
