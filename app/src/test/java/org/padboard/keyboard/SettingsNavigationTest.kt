@@ -13,15 +13,31 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk=[33])
 class SettingsNavigationTest {
+    @Test fun selectedLanguagesPersistAndRemovingTheActiveLanguageSelectsAnEnabledOne() {
+        val controller=Robolectric.buildActivity(SetupActivity::class.java).setup()
+        val prefs=controller.get().getSharedPreferences("settings",0)
+        prefs.edit().clear().putString("language","de").commit()
+        TypingLanguages.select(prefs,listOf("de","fr","de","unknown"))
+        assertEquals(listOf("de","fr"),TypingLanguages.enabled(prefs))
+        TypingLanguages.select(prefs,listOf("fr"))
+        assertEquals("fr",prefs.getString("language",null))
+        try { TypingLanguages.select(prefs,emptyList()); fail("Empty language selection must fail") } catch(expected:IllegalArgumentException) {}
+        assertEquals(listOf("fr"),TypingLanguages.enabled(prefs))
+        controller.pause().stop().destroy()
+    }
     @Test fun calibrationReadsPrintedAAndKeepsOtherBindings() {
         val controller=Robolectric.buildActivity(SetupActivity::class.java).setup()
         val activity=controller.get()
         val prefs=activity.getSharedPreferences("settings",0)
         prefs.edit().putString("buttonLayout","nintendo").putString("map_send","106").commit()
         val calibrate=SetupActivity::class.java.getDeclaredMethod("calibrateButtons").apply { isAccessible=true }
+        for(layout in listOf("nintendo","xbox","playstation")) {
+        prefs.edit().putString("buttonLayout",layout).commit()
         for((key,mode) in listOf(97 to "position",96 to "logical")) {
             calibrate.invoke(activity)
             val dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog()
+            val message=dialog.findViewById<android.widget.TextView>(android.R.id.message).text.toString()
+            assertTrue(message.contains(if(layout=="playstation") "✕ (cross)" else "printed A"))
             dialog.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN,key))
             assertEquals(mode,prefs.getString("inputConvention",null))
             val map=ButtonBindings.read(prefs)
@@ -29,6 +45,21 @@ class SettingsNavigationTest {
             assertEquals(106,map["send"])
             assertEquals(map.size,map.values.toSet().size)
         }
+        }
+        controller.pause().stop().destroy()
+    }
+    @Test fun changingPresetSwapsCustomBindingsAndCanRoundTrip() {
+        val controller=Robolectric.buildActivity(SetupActivity::class.java).setup()
+        val prefs=controller.get().getSharedPreferences("settings",0)
+        prefs.edit().clear().putString("map_type","99").putString("map_delete","96").putString("map_send","106").commit()
+        ButtonBindings.selectProfile(prefs,"playstation_swapped")
+        assertEquals("position",prefs.getString("inputConvention",null))
+        assertEquals("playstation",prefs.getString("buttonLayout",null))
+        assertEquals(100,ButtonBindings.read(prefs)["type"])
+        assertEquals(106,ButtonBindings.read(prefs)["send"])
+        ButtonBindings.selectProfile(prefs,"playstation")
+        assertEquals(99,ButtonBindings.read(prefs)["type"])
+        assertEquals(96,ButtonBindings.read(prefs)["delete"])
         controller.pause().stop().destroy()
     }
     @Test fun vibrationSelectionKeepsTheSameScrolledSettingsView() {
@@ -104,9 +135,10 @@ class SettingsNavigationTest {
         activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_RIGHT))
         assertSame(controls[1],activity.window.decorView.findFocus())
         val spinner=controls.filterIsInstance<Spinner>().first()
+        val next=(spinner.selectedItemPosition+1).coerceAtMost(spinner.count-1)
         spinner.requestFocus()
         activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_RIGHT))
-        assertEquals(1,spinner.selectedItemPosition)
+        assertEquals(next,spinner.selectedItemPosition)
         controller.pause().stop().destroy()
     }
 }

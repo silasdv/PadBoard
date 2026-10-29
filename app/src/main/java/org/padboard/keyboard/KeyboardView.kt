@@ -114,7 +114,9 @@ class KeyboardView(context: Context, private val state: KeyboardState, private v
         if (code in listOf(96,97,99,100)) c.drawCircle(x,y,size*.64f,paint)
         else c.drawRoundRect(RectF(x-size, y-size*.58f,x+size*.5f,y+size*.58f),2f,2f,paint)
         paint.style = Paint.Style.FILL
-        if (text == "▶") {
+        if (text in ButtonGlyph.names) {
+            ButtonGlyph.draw(c,text,x,y,size*.42f,paint)
+        } else if (text == "▶") {
             c.drawPath(Path().apply { moveTo(x-size*.45f,y-size*.55f); lineTo(x+size*.45f,y); lineTo(x-size*.45f,y+size*.55f); close() },paint)
         } else {
             paint.textSize = size * .85f; paint.textAlign = Paint.Align.CENTER

@@ -53,7 +53,7 @@ open class PadIme : InputMethodService(), InputManager.InputDeviceListener {
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         clearHeld(); active = true; keyboard?.controllerFocus = false
-        state.changeLanguage(prefs.getString("language", "de") ?: "de")
+        state.changeLanguage((prefs.getString("language", "en") ?: "en").takeIf { it in TypingLanguages.enabled(prefs) } ?: TypingLanguages.enabled(prefs).first())
         state.numberRow = prefs.getBoolean("numberRow", false)
         val variation = (info?.inputType ?: 0) and InputType.TYPE_MASK_VARIATION
         state.email = (info?.inputType ?: 0) and InputType.TYPE_MASK_CLASS == InputType.TYPE_CLASS_TEXT && variation in listOf(InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS)
@@ -62,7 +62,8 @@ open class PadIme : InputMethodService(), InputManager.InputDeviceListener {
     override fun onCurrentInputMethodSubtypeChanged(newSubtype: InputMethodSubtype?) {
         super.onCurrentInputMethodSubtypeChanged(newSubtype)
         newSubtype?.locale?.let { locale ->
-            val lang = if (locale.startsWith("de")) "de" else "en"
+            val lang = locale.substringBefore('_').substringBefore('-')
+            if(lang !in TypingLanguages.enabled(prefs)) return
             prefs.edit().putString("language", lang).apply(); state.changeLanguage(lang); paint()
         }
     }
@@ -202,7 +203,7 @@ open class PadIme : InputMethodService(), InputManager.InputDeviceListener {
             }
             "symbols" -> state.toggleSymbols()
             "case" -> state.toggleCase()
-            "language" -> { state.changeLanguage(if (state.language == "de") "en" else "de"); prefs.edit().putString("language", state.language).apply() }
+            "language" -> { state.changeLanguage(TypingLanguages.next(state.language,TypingLanguages.enabled(prefs))); prefs.edit().putString("language", state.language).apply() }
             "settings" -> {
                 active=false; clearHeld(); preview?.clear(); requestHideSelf(0)
                 startActivity(android.content.Intent(this,SetupActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))

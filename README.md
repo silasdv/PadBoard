@@ -2,7 +2,7 @@
 
 **A controller-first Android keyboard for handhelds, with full touch support.**
 
-PadBoard is built for Android gaming handhelds such as the Retroid Pocket 6. It supports English QWERTY and German QWERTZ typing layouts.
+PadBoard is built for Android gaming handhelds such as the Retroid Pocket 6. It includes 13 European typing layouts. Choose your languages in settings; the globe cycles only through your selection.
 
 ## Vibecoded
 
@@ -10,7 +10,9 @@ This project is **vibecoded**: its implementation and documentation were created
 
 ## Features
 
-- Nintendo (default), Xbox and PlayStation button labels with configurable mappings.
+- A/B/X/Y or vector PlayStation button symbols, confirm calibration and configurable mappings.
+- English, German, French, Spanish, Italian, Portuguese, Dutch, Swedish, Danish, Norwegian, Finnish, Polish and Czech typing layouts.
+- Multi-select language picker; quick switching cycles only through enabled languages.
 - D-pad, stick and touch support, with separate controller/touch interaction modes in settings.
 - Stable Shift and symbol-toggle positions, language globe and settings shortcut.
 - Icons for Search, Go, Next, Send and Done, following the active field's editor action.
@@ -21,7 +23,7 @@ This project is **vibecoded**: its implementation and documentation were created
 
 ## Install
 
-Download **PadBoard-1.0.1.apk** from this repository's Releases page. Android 8.0 or newer is required.
+Download **PadBoard-1.0.2.apk** from this repository's Releases page. Android 8.0 or newer is required.
 
 1. Open PadBoard and choose **Enable** in the Setup section.
 2. Enable PadBoard in Android's input-method settings.
@@ -32,22 +34,32 @@ Keep another keyboard enabled so you can switch back with Android's keyboard pic
 
 **Upgrading from earlier test APKs:** 1.0 uses a dedicated release key. Uninstall any build signed with the old development key before installing this release. Note your custom mappings first; uninstalling clears settings. Future releases must use the same release key.
 
-## Default Nintendo controls
+## Default controls
 
 | Input | Action |
 | --- | --- |
 | D-pad / left stick | Move selection |
-| A | Enter selected key |
-| B | Close keyboard |
-| X | Delete |
-| Y | Space |
+| A / Cross | Enter selected key |
+| B / Circle | Close keyboard |
+| X / Square | Delete |
+| Y / Triangle | Space |
 | L1 / R1 | Previous / next row |
 | L2 | Toggle symbols |
 | R2 | Toggle uppercase |
 | Start | Invoke the field action |
-| Select | Switch typing language |
+| Select | Switch enabled typing language |
 
-Use **Button Mapping >** to choose button labels and adjust bindings. On Retroid handhelds, Android controller modes can change the reported ABXY codes. Select Nintendo for the printed Retroid labels, then choose **Calibrate printed A button** and press the physical A button. Repeat calibration after changing the Android controller mode. The Android button reporting option also allows manual selection of logical labels or physical positions. Calibration resets the four face-button actions and preserves other bindings by swapping conflicts. Assigning an occupied button swaps the two actions. Mappings currently apply globally.
+Use **Button Mapping >** to choose **A/B/X/Y** or **PlayStation symbols**, each with a **(swapped)** variant. These names do not assume where the physical buttons are placed.
+
+Choose **Calibrate confirm button** and press printed **A** or **Cross**, as prompted. PadBoard reads the received Android code, selects the standard/swapped preset and resets the four face actions to confirm, close, delete and space. Other actions are preserved by swapping conflicts. Repeat after changing Android controller mode. Calibration identifies the common pair swap, not the controller model or arbitrary permutations; other arrangements can be mapped individually. Preset changes also translate custom face-button bindings so action labels stay consistent. Bindings currently apply globally across controllers.
+
+The distinction is documented by [SDL's button-label handling](https://wiki.libsdl.org/SDL2/SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS), while [Dolphin supports assigning actual inputs by pressing them](https://en.dolphin-emu.org/docs/guides/configuring-controllers/). These approaches inform PadBoard's presets and calibration; neither proves a handheld firmware mode from its device name alone.
+
+[Eden's Android backend](https://github.com/eden-emulator/mirror/blob/master/src/input_common/drivers/android.cpp) checks supported keys/axes and applies separate manufacturer-based AB and XY exceptions. PadBoard uses explicit label choice and calibration rather than guessing from unverified device profiles.
+
+## Typing languages
+
+Open **Languages > Typing languages** for the multi-select dropdown dialog. Keep at least one language selected and save. The globe and mapped language-switch action cycle through enabled languages only. Removing the active language selects the first remaining entry. Settings remain in English; these are typing layouts, not spellchecking, prediction or translation. Accent rows sit above the base keyboard so function buttons keep their positions.
 
 ## Build
 

@@ -20,9 +20,9 @@ class KeyboardState(var language: String = "de") {
         fun letters(text: String) = text.map { c -> PadKey(c.toString(), if (uppercase && !symbols && c != 'ß') c.toString().uppercase(Locale.ROOT) else c.toString()) }
         val lines = if (symbols && numberRow) listOf("@#€$%&*+-=", "!?;:()[]/_", "<>~`^{}\\|°")
             else if (symbols) listOf("1234567890", "@#€$%&*+-=", "!?;:()[]/_")
-            else if (language == "de") listOf("qwertzuiopü", "asdfghjklöä", "yxcvbnmß")
-            else listOf("qwertyuiop", "asdfghjkl", "zxcvbnm")
-        val extras = (if (email) listOf(listOf(PadKey("@","@",width=3.1875f),PadKey(".com",".com",width=3.1875f),PadKey(".de",".de",width=3.1875f),PadKey(".net",".net",width=3.1875f))) else emptyList()) +
+            else TypingLanguages.get(language).rows
+        val accents=TypingLanguages.get(language).accents
+        val extras = (if(accents.isNotEmpty()) listOf(letters(accents).map { it.copy(width=12.75f/accents.length) }) else emptyList()) + (if (email) listOf(listOf(PadKey("@","@",width=3.1875f),PadKey(".com",".com",width=3.1875f),PadKey(".de",".de",width=3.1875f),PadKey(".net",".net",width=3.1875f))) else emptyList()) +
             (if (numberRow) listOf(letters("1234567890").map { it.copy(width=1.275f) }) else emptyList())
         return extras + listOf(
             letters(lines[0]) + PadKey("delete","⌫","delete",1.25f,"X"),
@@ -35,7 +35,7 @@ class KeyboardState(var language: String = "de") {
                 (if(!symbols) listOf(PadKey("send","↵","send",2.25f,"▶")) else listOf(PadKey("reservedAction","","none",2.25f)))
         )
     }
-    fun extraRows() = (if(email) 1 else 0) + (if(numberRow) 1 else 0)
+    fun extraRows() = (if(TypingLanguages.get(language).accents.isNotEmpty()) 1 else 0) + (if(email) 1 else 0) + (if(numberRow) 1 else 0)
     fun rows() = keys().map { line -> line.map { it.label } }
     fun placements(): List<KeyPlacement> = keys().flatMapIndexed { r, line ->
         val baseRow=r-extraRows()

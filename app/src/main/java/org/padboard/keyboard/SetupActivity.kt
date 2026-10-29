@@ -71,11 +71,11 @@ class SetupActivity : Activity() {
         var focus=focusedControl()
         val key=event.keyCode
         val confirm=ButtonBindings.read(getSharedPreferences("settings",MODE_PRIVATE)).getValue("type")
-        val navigation=key==confirm || key in listOf(android.view.KeyEvent.KEYCODE_DPAD_UP,android.view.KeyEvent.KEYCODE_DPAD_DOWN,android.view.KeyEvent.KEYCODE_DPAD_LEFT,android.view.KeyEvent.KEYCODE_DPAD_RIGHT,android.view.KeyEvent.KEYCODE_BUTTON_A,android.view.KeyEvent.KEYCODE_DPAD_CENTER)
+        val navigation=key==confirm || key in listOf(android.view.KeyEvent.KEYCODE_DPAD_UP,android.view.KeyEvent.KEYCODE_DPAD_DOWN,android.view.KeyEvent.KEYCODE_DPAD_LEFT,android.view.KeyEvent.KEYCODE_DPAD_RIGHT,android.view.KeyEvent.KEYCODE_DPAD_CENTER)
         if(!navigation || hasWindowFocus().not()) return super.dispatchKeyEvent(event)
         setControllerMode(true); focus=focusedControl()
         if(focus is EditText && keyboardVisible()) return super.dispatchKeyEvent(event)
-        if(focus is EditText && (key==confirm || key in listOf(android.view.KeyEvent.KEYCODE_BUTTON_A,android.view.KeyEvent.KEYCODE_DPAD_CENTER))) {
+        if(focus is EditText && (key==confirm || key in listOf(android.view.KeyEvent.KEYCODE_DPAD_CENTER))) {
             if(event.action==android.view.KeyEvent.ACTION_DOWN && event.repeatCount==0)
                 (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(focus,InputMethodManager.SHOW_IMPLICIT)
             return true
@@ -150,8 +150,12 @@ class SetupActivity : Activity() {
     }
     override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); ButtonBindings.migrate(getSharedPreferences("settings",MODE_PRIVATE)); render() }
     private fun calibrateButtons() {
-        val dialog=AlertDialog.Builder(this).setTitle("Calibrate controller")
-            .setMessage("Press the button printed A on your controller. This sets A to type, B to close, X to delete and Y to space. Other bindings are preserved by swapping conflicts. Use this again after changing the handheld's Android controller mode.")
+        val prefs=getSharedPreferences("settings",MODE_PRIVATE)
+        val playstation=prefs.getString("buttonLayout","nintendo")=="playstation"
+        val printed=if(playstation) "✕ (cross)" else "A"
+        val actions=if(playstation) "✕ to type, ○ to close, □ to delete and △ to space" else "A to type, B to close, X to delete and Y to space"
+        val dialog=AlertDialog.Builder(this).setTitle("Calibrate confirm button")
+            .setMessage("Press the button printed $printed on your controller. This detects the standard or swapped button reporting and sets $actions. Other bindings are preserved by swapping conflicts. This does not identify the controller model. Repeat after changing Android controller mode. For other arrangements, map actions individually.")
             .setNegativeButton("Cancel",null).create()
         dialog.setOnKeyListener { _,key,event ->
             if(key !in listOf(96,97)) false else {
@@ -159,7 +163,7 @@ class SetupActivity : Activity() {
                     val prefs=getSharedPreferences("settings",MODE_PRIVATE)
                     val mode=if(key==96) "logical" else "position"
                     var updated=ButtonBindings.read(prefs)
-                    val face=ButtonBindings.forLayout("nintendo",mode)
+                    val face=ButtonBindings.forLayout(prefs.getString("buttonLayout","abxy") ?: "abxy",mode)
                     for(action in listOf("type","close","delete","space")) updated=ButtonBindings.assign(updated,action,face.getValue(action))
                     val edit=prefs.edit().putString("inputConvention",mode)
                     updated.forEach { (a,c)->edit.putString("map_$a",c.toString()) }; edit.apply()
@@ -209,6 +213,14 @@ class SetupActivity : Activity() {
             spinner.adapter=object:ArrayAdapter<String>(this,android.R.layout.simple_spinner_item,labels) {
                 override fun getView(position:Int,convertView:View?,parent:ViewGroup):View = super.getView(position,convertView,parent).apply {
                     (this as TextView).setTextColor(ink); textSize=17f; setPadding(dp(12),dp(12),dp(12),dp(12))
+                    val symbol=labels[position]
+                    if(symbol in ButtonGlyph.names) { text=ButtonGlyph.names[symbol]; setCompoundDrawables(ButtonGlyph(symbol,ink).apply { setBounds(0,0,dp(24),dp(24)) },null,null,null); compoundDrawablePadding=dp(10) }
+                    else setCompoundDrawables(null,null,null,null)
+                }
+                override fun getDropDownView(position:Int,convertView:View?,parent:ViewGroup):View = super.getDropDownView(position,convertView,parent).apply {
+                    val symbol=labels[position]
+                    if(symbol in ButtonGlyph.names) { (this as TextView).text=ButtonGlyph.names[symbol]; setCompoundDrawables(ButtonGlyph(symbol,Color.DKGRAY).apply { setBounds(0,0,dp(24),dp(24)) },null,null,null); compoundDrawablePadding=dp(10) }
+                    else (this as TextView).setCompoundDrawables(null,null,null,null)
                 }
             }.apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
             spinner.setSelection(selected,false)
@@ -223,13 +235,18 @@ class SetupActivity : Activity() {
         if(mappingPage) {
             button(body,"‹ Back") { mappingPage=false; render() }
         val mappingCard=card("Controller & button mapping","Choose button labels and map keyboard actions. Assigning a used button swaps the two actions so both remain reachable. D-pad navigation stays available. Bindings apply to all controllers.")
-        dropdown(mappingCard,listOf("Nintendo","Xbox","PlayStation"),listOf("nintendo","xbox","playstation"),"buttonLayout","nintendo") { render() }
         val layout=prefs.getString("buttonLayout","nintendo") ?: "nintendo"
-        val bindings=ButtonBindings.read(prefs)
         val convention=prefs.getString("inputConvention","logical") ?: "logical"
-        text(mappingCard,"Android button reporting",14f,muted)
-        dropdown(mappingCard,listOf("Logical A/B/X/Y","Physical positions (Nintendo labels swapped)"),listOf("logical","position"),"inputConvention","logical") { render() }
-        button(mappingCard,"Calibrate printed A button") { calibrateButtons() }
+        val profile=(if(layout=="playstation") "playstation" else "abxy")+if(convention=="position") "_swapped" else ""
+        prefs.edit().putString("controllerProfile",profile).apply()
+        text(mappingCard,"Controller buttons",14f,muted)
+        dropdown(mappingCard,listOf("A/B/X/Y","A/B/X/Y (swapped)","PlayStation symbols","PlayStation symbols (swapped)"),
+            listOf("abxy","abxy_swapped","playstation","playstation_swapped"),"controllerProfile",profile) {
+            ButtonBindings.selectProfile(prefs,prefs.getString("controllerProfile",profile)!!); render()
+        }
+        text(mappingCard,"Choose letters or PlayStation symbols. This does not assume where the buttons are placed. Calibrate your confirm button below; swapped reverses the two face-button pairs.",14f,muted)
+        button(mappingCard,"Calibrate confirm button") { calibrateButtons() }
+        val bindings=ButtonBindings.read(prefs)
         val profileDefaults=ButtonBindings.forLayout(layout,convention)
         val names=mapOf("type" to "Confirm character","close" to "Close keyboard","delete" to "Delete","space" to "Space","up" to "Previous row","down" to "Next row","symbols" to "Symbols","case" to "Upper/lower case","send" to "Editor action","language" to "Switch language")
         for((action,code) in profileDefaults) {
@@ -254,9 +271,23 @@ class SetupActivity : Activity() {
         button(body,"Button Mapping  ›") { mappingPage=true; render() }.apply {
             (layoutParams as LinearLayout.LayoutParams).bottomMargin=dp(24)
         }
-        val languages=card("Languages","Typing language selects QWERTZ or QWERTY. Interface language only changes settings. More languages will follow.")
-        text(languages,"Typing language",14f,muted)
-        dropdown(languages,listOf("Deutsch · QWERTZ","English · QWERTY"),listOf("de","en"),"language","de")
+        val languages=card("Languages","Select the typing languages you use. The globe and mapped language button cycle only through this selection, in the listed order. At least one language is required. Settings remain in English; these are keyboard layouts, not translation or spellchecking.")
+        val enabled=TypingLanguages.enabled(prefs)
+        button(languages,"Typing languages  ▾  "+enabled.joinToString(" · ") { TypingLanguages.get(it).name.substringBefore(" ·") }) {
+            val chosen=TypingLanguages.all.map { it.code in enabled }.toBooleanArray()
+            val dialog=AlertDialog.Builder(this).setTitle("Typing languages")
+                .setMultiChoiceItems(TypingLanguages.all.map { it.name }.toTypedArray(),chosen) { d,index,checked ->
+                    chosen[index]=checked
+                    if(chosen.none { it }) {
+                        chosen[index]=true; (d as AlertDialog).listView.setItemChecked(index,true)
+                        Toast.makeText(this,"Keep at least one language selected",Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .setNegativeButton("Cancel",null)
+                .setPositiveButton("Save") { _,_ -> TypingLanguages.select(prefs,TypingLanguages.all.filterIndexed { i,_->chosen[i] }.map { it.code }); render() }
+                .create()
+            dialog.show()
+        }
 
         val design=card("Appearance","Height is a fraction of full display height: 50% of 1080 px is 540 px. Android system bars can limit usable space. Changes apply when the keyboard next opens.")
         dropdown(design,Palette.names,Palette.ids,"theme","oled")
@@ -321,7 +352,7 @@ class SetupActivity : Activity() {
             try { startActivity(Intent(Intent.ACTION_VIEW,android.net.Uri.parse("https://ko-fi.com/silasdv"))) }
             catch (_:android.content.ActivityNotFoundException) { Toast.makeText(this,"No browser available",Toast.LENGTH_SHORT).show() }
         }
-        text(body,"1.0.1",12f,muted)
+        text(body,"1.0.2",12f,muted)
         installFocus(body)
         if (controllerMode && controls.isNotEmpty()) controls[previousIndex.coerceAtMost(controls.lastIndex)].requestFocus()
     }

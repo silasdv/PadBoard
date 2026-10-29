@@ -4,6 +4,31 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class KeyboardStateTest {
+    @Test fun europeanLayoutsKeepControlsStableAndTheirCharactersReachable() {
+        for(language in TypingLanguages.all) {
+            val state=KeyboardState(language.code)
+            val typed=state.keys().flatten().filter { it.action=="text" }.joinToString("") { it.label }
+            for(c in language.rows.joinToString("")+language.accents) assertTrue("${language.code}: $c",c in typed)
+            val anchors=state.placements().filter { it.key.action in listOf("case","symbols","space") }.associate { it.key.action to (it.row to it.x) }
+            state.toggleSymbols()
+            for(p in state.placements()) {
+                assertTrue("${language.code}: ${p.key.id}",p.key.width>0 && p.x>=0 && p.x+p.key.width<=state.totalWidth()+.001f)
+                if(p.key.action in anchors) assertEquals(anchors[p.key.action],p.row to p.x)
+            }
+        }
+        assertEquals("fr",TypingLanguages.next("de",listOf("de","fr")))
+        assertEquals("de",TypingLanguages.next("fr",listOf("de","fr")))
+        assertEquals("fr",TypingLanguages.next("fr",listOf("fr")))
+    }
+    @Test fun allProfilesKeepFaceLabelsConsistentWhenSwapped() {
+        for(layout in listOf("nintendo","xbox","playstation")) {
+            for(mode in listOf("logical","position")) {
+                val expected=if(layout=="playstation") listOf("✕","○","□","△") else listOf("A","B","X","Y")
+                val bindings=ButtonBindings.forLayout(layout,mode)
+                assertEquals(expected,listOf("type","close","delete","space").map { ButtonBindings.label(bindings.getValue(it),layout,mode) })
+            }
+        }
+    }
     @Test fun nintendoLogicalAndPositionReportingResolvePrintedButtonsConsistently() {
         for(mode in listOf("logical","position")) {
             val map=ButtonBindings.forLayout("nintendo",mode)
